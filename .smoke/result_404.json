@@ -1,0 +1,14 @@
+{
+  "conversation_id": "93a9ab27-2477-489b-a81d-abad8065e898",
+  "sent": {
+    "text": "帮我查一下订单 ORDER_99999999 到哪了"
+  },
+  "replies": [
+    {
+      "text": "没有找到订单 ORDER_99999999，请核对订单号，或确认是否属于当前账号",
+      "reply_type": "ANSWER"
+    }
+  ],
+  "mode": "AI",
+  "processing": false
+}

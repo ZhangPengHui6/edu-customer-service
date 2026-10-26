@@ -1,0 +1,70 @@
+name: edu-customer-service
+
+# PostgreSQL / Redis / Milvus / MinIO 已直接安装在 192.168.168.100，
+# 这里只编排两个业务服务；地址通过 deploy/.env 注入。
+
+services:
+  customer-service:
+    build:
+      context: ../PRD/customer_service_edu
+    image: edu/customer-service:0.1.0
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: ${CS_DATABASE_URL}
+      AI_SERVICE_URL: http://ai-service:8002
+      ENV: ${ENV:-dev}
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+  ai-service:
+    build:
+      context: ../PRD/customer_ai_edu
+      args:
+        INSTALL_EMBEDDING: ${INSTALL_EMBEDDING:-false}
+    image: edu/ai-service:0.1.0
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: ${AI_DATABASE_URL}
+      CUSTOMER_SERVICE_URL: http://customer-service:8000
+      ENV: ${ENV:-dev}
+      EMBEDDING_MODEL_PATH: /models/bge-m3
+    volumes:
+      - ${EMBEDDING_HOST_DIR:-/opt/models/bge-m3}:/models/bge-m3:ro
+    ports:
+      - "8002:8002"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8002/health', timeout=3)"
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+  # 迁移与 seed 不自动执行，见 deploy/README.md。
+  # AI 镜像默认不含 sentence-transformers；需要在线编码时用
+  # INSTALL_EMBEDDING=true 重新构建，并把 bge-m3 放到 EMBEDDING_HOST_DIR。
